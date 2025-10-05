@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 
+
 [RequireComponent(typeof(Collider2D))]
 [RequireComponent(typeof(Rigidbody2D))]
 public class Player : MonoBehaviour
@@ -13,7 +14,7 @@ public class Player : MonoBehaviour
 
     [Header("Movimentação")]
     [SerializeField] private float moveSpeed = 5f;
-    [SerializeField] private float jumpForce = 5f;
+    [SerializeField] private float jumpForce = 10f;
 
     private Vector2 m_movementInput;
     private Rigidbody2D m_rigidbody;
@@ -21,7 +22,6 @@ public class Player : MonoBehaviour
 
     [Header("Detecção")]
     [SerializeField] private float groundCheckHeight = 0.1f;
-    [SerializeField] private float ladderCheckShrink = 0.9f;
     [SerializeField] private LayerMask groundLayer;
     [SerializeField] private LayerMask ladderLayer;
 
@@ -31,6 +31,10 @@ public class Player : MonoBehaviour
 
     private float jumpBufferCounter = 0f;
     private float coyoteCounter = 0f;
+
+    [Header("Escada")]
+    private bool onLadder = false;
+
 
     private void Awake()
     {
@@ -75,15 +79,16 @@ public class Player : MonoBehaviour
         else
             coyoteCounter -= Time.deltaTime;
 
-        // Escada
-        if (IsTouchingLadder())
-            Debug.Log("🪜 Encostou na escada!");
+
+
+
     }
 
     private void FixedUpdate()
     {
         HandleMovement();
         HandleJump();
+        HandleLadder();
     }
 
     private void HandleMovement()
@@ -116,13 +121,40 @@ public class Player : MonoBehaviour
         return Physics2D.OverlapBox(boxCenter, boxSize, 0f, groundLayer) != null;
     }
 
-    private bool IsTouchingLadder()
-    {
-        Vector2 boxSize = m_collider.bounds.size * ladderCheckShrink;
-        Vector2 boxCenter = m_collider.bounds.center;
 
-        return Physics2D.OverlapBox(boxCenter, boxSize, 0f, ladderLayer) != null;
+    private void HandleLadder()
+    {
+        bool onLadderContact = Physics2D.OverlapBox(m_collider.bounds.center, m_collider.bounds.size, 0f, ladderLayer) != null; // Checa colisão com escada
+ 
+        if (onLadderContact && m_movementInput.y > 0)
+        {
+            onLadder = true;
+            m_rigidbody.bodyType = RigidbodyType2D.Kinematic;
+            //m_rigidbody = new Vector2(onLadderContact.transform.position.x + 1f, m_rigidbody.position.y); // Centraliza o jogador na escada
+            m_rigidbody.linearVelocity = new Vector2(0, m_movementInput.y * moveSpeed);
+            Debug.Log("🪜 Tocando escada com seta pra cima");
+        }
+        else if (onLadder && m_movementInput.y == 0)
+        {
+            m_rigidbody.linearVelocity = Vector2.zero;
+            Debug.Log("🪜 Parado na escada");
+        }
+        else if (onLadder && m_movementInput.y < 0)
+        {
+            m_rigidbody.bodyType = RigidbodyType2D.Dynamic;
+            onLadder = false;
+            Debug.Log("🪜 Saindo da escada com seta pra baixo");
+        }
+        else if (onLadder && onLadderContact)
+        {
+            m_rigidbody.bodyType = RigidbodyType2D.Dynamic;
+            onLadder = false;
+            Debug.Log("🪜 Saindo da escada por não estar mais em contato");
+        }
     }
+
+
+
 
     private void OnDrawGizmos()
     {
@@ -135,7 +167,7 @@ public class Player : MonoBehaviour
         Gizmos.DrawWireCube(groundBoxCenter, groundBoxSize);
 
         // Gizmo escada
-        Vector2 ladderBoxSize = m_collider.bounds.size * ladderCheckShrink;
+        Vector2 ladderBoxSize = m_collider.bounds.size;
         Vector2 ladderBoxCenter = m_collider.bounds.center;
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireCube(ladderBoxCenter, ladderBoxSize);
