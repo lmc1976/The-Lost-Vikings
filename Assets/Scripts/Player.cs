@@ -122,36 +122,47 @@ public class Player : MonoBehaviour
     }
 
 
-    private void HandleLadder()
+private void HandleLadder()
+{
+    // 1. Usa OverlapBox para PEGAR o Collider2D da escada (LadderCollider).
+    // O resultado será o Collider2D da escada se houver contato, ou null se não houver.
+    Collider2D ladderCollider = Physics2D.OverlapBox(m_collider.bounds.center, m_collider.bounds.size, 0f, ladderLayer);
+    
+    // A condição de contato é checada por 'ladderCollider != null'
+
+    if (ladderCollider != null && m_movementInput.y > 0)
     {
-        bool onLadderContact = Physics2D.OverlapBox(m_collider.bounds.center, m_collider.bounds.size, 0f, ladderLayer) != null; // Checa colisão com escada
- 
-        if (onLadderContact && m_movementInput.y > 0)
-        {
-            onLadder = true;
-            m_rigidbody.bodyType = RigidbodyType2D.Kinematic;
-            //m_rigidbody = new Vector2(onLadderContact.transform.position.x + 1f, m_rigidbody.position.y); // Centraliza o jogador na escada
-            m_rigidbody.linearVelocity = new Vector2(0, m_movementInput.y * moveSpeed);
-            Debug.Log("🪜 Tocando escada com seta pra cima");
-        }
-        else if (onLadder && m_movementInput.y == 0)
-        {
-            m_rigidbody.linearVelocity = Vector2.zero;
-            Debug.Log("🪜 Parado na escada");
-        }
-        else if (onLadder && m_movementInput.y < 0)
-        {
-            m_rigidbody.bodyType = RigidbodyType2D.Dynamic;
-            onLadder = false;
-            Debug.Log("🪜 Saindo da escada com seta pra baixo");
-        }
-        else if (onLadder && onLadderContact)
-        {
-            m_rigidbody.bodyType = RigidbodyType2D.Dynamic;
-            onLadder = false;
-            Debug.Log("🪜 Saindo da escada por não estar mais em contato");
-        }
+        // Obtém a posição X da escada (o objeto colidido)
+        float ladderCenterX = ladderCollider.transform.position.x;
+        
+        onLadder = true;
+        m_rigidbody.bodyType = RigidbodyType2D.Kinematic;
+        
+        // Centraliza o Rigidbody na posição X da escada
+        m_rigidbody.position = new Vector2(ladderCenterX - 2f, m_rigidbody.position.y); 
+        
+        m_rigidbody.linearVelocity = new Vector2(0, m_movementInput.y * moveSpeed);
+        Debug.Log("🪜 Tocando escada com seta pra cima");
     }
+    else if (onLadder && m_movementInput.y == 0)
+    {
+        m_rigidbody.linearVelocity = Vector2.zero;
+        Debug.Log("🪜 Parado na escada");
+    }
+    else if (onLadder && m_movementInput.y < 0)
+    {
+        m_rigidbody.bodyType = RigidbodyType2D.Dynamic;
+        onLadder = false;
+        Debug.Log("🪜 Saindo da escada com seta pra baixo");
+    }
+    // Verifica se o jogador estava na escada (onLadder) mas PERDEU O CONTATO (ladderCollider == null)
+    else if (onLadder && ladderCollider == null) 
+    {
+        m_rigidbody.bodyType = RigidbodyType2D.Dynamic;
+        onLadder = false;
+        Debug.Log("🪜 Saindo da escada por não estar mais em contato");
+    }
+}
 
 
 
